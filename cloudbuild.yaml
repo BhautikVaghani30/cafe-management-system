@@ -45,3 +45,8 @@ images:
 
 # Increase the build timeout to avoid issues on the first run.
 timeout: '1200s'
+
+# Define build-level options.
+options:
+  # Set the logging mode to Cloud Logging only, which is required for triggers with a service account.
+  logging: CLOUD_LOGGING_ONLY
