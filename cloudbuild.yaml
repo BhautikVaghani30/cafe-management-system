@@ -32,7 +32,7 @@ steps:
       - '--add-cloudsql-instances=code-with-intellij-gemini:us-central1:namaste-village-001' # Connect to the database
       # Set non-sensitive environment variables
       - '--set-env-vars=DB_NAME=namastevillage'
-      - '--set-env-vars=spring.datasource.username=root'
+      - '--set-env-vars=spring.datasource.username=namaste-village-001'
       - '--set-env-vars=spring.mail.username=codewithbhautik01@gmail.com'
       # Securely mount secrets from Secret Manager as environment variables
       - '--set-secrets=spring.datasource.password=db-password:latest'
