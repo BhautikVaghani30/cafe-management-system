@@ -39,6 +39,7 @@ steps:
       - '--set-secrets=jwt.secret=jwt-secret:latest'
       - '--set-secrets=spring.mail.password=mail-password:latest'
 
+
 # Specify the image to be pushed to Artifact Registry after a successful build.
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/cafe-management-repo/cafe-management-system:$SHORT_SHA'
