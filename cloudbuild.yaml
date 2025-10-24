@@ -1,0 +1,47 @@
+# This file defines the CI/CD pipeline for the Cafe Management System.
+# It is executed by Google Cloud Build.
+
+steps:
+  # 1. Build the container image using the Dockerfile in the current directory.
+  # We tag the image with the short git commit SHA for versioning.
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/cafe-management-repo/cafe-management-system:$SHORT_SHA'
+      - '.'
+
+  # 2. Push the container image to Google Artifact Registry.
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/cafe-management-repo/cafe-management-system:$SHORT_SHA'
+
+  # 3. Deploy the new image to Cloud Run.
+  # This step uses the gcloud CLI and securely injects secrets from Secret Manager.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'cafe-management-system' # The name of our Cloud Run service
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/cafe-management-repo/cafe-management-system:$SHORT_SHA' # Deploy the image we just built
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--add-cloudsql-instances=code-with-intellij-gemini:us-central1:namaste-village-001' # Connect to the database
+      # Set non-sensitive environment variables
+      - '--set-env-vars=DB_NAME=namastevillage'
+      - '--set-env-vars=spring.datasource.username=root'
+      - '--set-env-vars=spring.mail.username=codewithbhautik01@gmail.com'
+      # Securely mount secrets from Secret Manager as environment variables
+      - '--set-secrets=spring.datasource.password=db-password:latest'
+      - '--set-secrets=jwt.secret=jwt-secret:latest'
+      - '--set-secrets=spring.mail.password=mail-password:latest'
+
+# Specify the image to be pushed to Artifact Registry after a successful build.
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/cafe-management-repo/cafe-management-system:$SHORT_SHA'
+
+# Increase the build timeout to avoid issues on the first run.
+timeout: '1200s'
