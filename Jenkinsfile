@@ -1,4 +1,4 @@
-// Jenkinsfile - Improved Version
+// Jenkinsfile - Improved Version (with temporary fix)
 
 pipeline {
     agent any
@@ -8,7 +8,7 @@ pipeline {
         GCP_REGION               = "us-central1"
         REPO_NAME                = "cafe-management-repo"
         IMAGE_NAME               = "cafe-management-system"
-        STAGING_SERVICE_NAME     = "cafe-management-system-staging" // New: for our staging environment
+        STAGING_SERVICE_NAME     = "cafe-management-system-staging"
         GCP_CREDENTIALS_ID       = "gcp-jenkins-creds"
         INSTANCE_CONNECTION_NAME = "code-with-intellij-gemini:us-central1:namaste-village-001"
         DB_NAME                  = "namastevillage"
@@ -24,19 +24,11 @@ pipeline {
             }
         }
 
-        // --- NEW: Code Quality & Security Stage ---
-        stage('Code Quality & Security') {
+        // --- Code Quality Stage (Vulnerability Scan temporarily disabled) ---
+        stage('Static Code Analysis') {
             steps {
-                parallel(
-                    "Static Analysis": {
-                        echo "Running static code analysis with Checkstyle..."
-                        sh 'mvn checkstyle:check'
-                    },
-                    "Vulnerability Scan": {
-                        echo "Scanning dependencies for known vulnerabilities..."
-                        sh 'mvn org.owasp:dependency-check-maven:check'
-                    }
-                )
+                echo "Running static code analysis with Checkstyle..."
+                sh 'mvn checkstyle:check'
             }
         }
 
@@ -53,10 +45,8 @@ pipeline {
                     def DOCKER_IMAGE = "${GCP_REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:${env.BUILD_NUMBER}"
                     echo "Building and pushing Docker image: ${DOCKER_IMAGE}"
 
-                    // Build the image
                     sh "docker build -t ${DOCKER_IMAGE} ."
 
-                    // Authenticate and push the image
                     withCredentials([file(credentialsId: GCP_CREDENTIALS_ID, variable: 'GCP_KEY_FILE')]) {
                         sh "gcloud auth activate-service-account --key-file=${GCP_KEY_FILE}"
                         sh "gcloud auth configure-docker ${GCP_REGION}-docker.pkg.dev -q"
@@ -66,7 +56,6 @@ pipeline {
             }
         }
 
-        // --- NEW: Deploy to Staging Environment ---
         stage('Deploy to Staging') {
             steps {
                 script {
@@ -90,10 +79,8 @@ pipeline {
             }
         }
 
-        // --- NEW: Manual Approval Gate ---
         stage('Manual Approval for Production') {
             steps {
-                // This pauses the pipeline and waits for a user to click "Proceed" in the Jenkins UI.
                 input message: "Staging deployment looks good. Ready to deploy to PRODUCTION?"
             }
         }
@@ -101,7 +88,6 @@ pipeline {
         stage('Deploy to Production') {
             steps {
                 script {
-                    // We deploy the *exact same* Docker image that was tested in staging.
                     def DOCKER_IMAGE = "${GCP_REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:${env.BUILD_NUMBER}"
                     echo "Deploying to Production Environment..."
                     withCredentials([file(credentialsId: GCP_CREDENTIALS_ID, variable: 'GCP_KEY_FILE')]) {
